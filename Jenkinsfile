@@ -6,7 +6,7 @@ pipeline {
         SONAR_QUBE_NAME = 'sonarqube-server'
         // Nexus
         NEXUS_REPOSITORY_ID = 'Nexus_customer_app'
-        NEXUS_URL = 'http://3.89.115.90:8081/repository/Nexus_customer_app/'
+        NEXUS_URL = 'http://3.110.33.225:8081/repository/Nexus_customer_app/'
         // Tomcat
         TOMCAT_URL = 'http://34.202.205.194:8080/manager/text'
         TOMCAT_CREDENTIALS_ID = 'tomcat-credentials'
@@ -19,7 +19,7 @@ pipeline {
     stages {
         stage('Git Clone') {
             steps {
-                git branch: 'feature-1.1', url: 'https://github.com/gannurohith/sabear_simplecutomerapp.git'
+                git branch: 'feature-1.1', url: 'https://github.com/venkatesh221024/venkatesh_simplecutomerapp.git'
             }
         }
         stage('SonarQube Analysis') {
