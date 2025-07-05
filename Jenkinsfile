@@ -2,7 +2,7 @@ pipeline {
     agent any
     environment {
         // SonarQube
-        SONAR_QUBE_CREDENTIALS_ID = 'TToken1'
+        SONAR_QUBE_CREDENTIALS_ID = 'TOKEN1'
         SONAR_QUBE_NAME = 'sonarqube-server'
         // Nexus
         NEXUS_REPOSITORY_ID = 'Nexus_customer_app'
