@@ -1,64 +1,93 @@
 pipeline {
     agent any
-
+    environment {
+        // SonarQube
+        SONAR_QUBE_CREDENTIALS_ID = 'TToken1'
+        SONAR_QUBE_NAME = 'sonarqube-server'
+        // Nexus
+        NEXUS_REPOSITORY_ID = 'Nexus_customer_app'
+        NEXUS_URL = 'http://3.89.115.90:8081/repository/Nexus_customer_app/'
+        // Tomcat
+        TOMCAT_URL = 'http://34.202.205.194:8080/manager/text'
+        TOMCAT_CREDENTIALS_ID = 'tomcat-credentials'
+        TOMCAT_APP_CONTEXT = 'SimpleCustomerApp'
+    }
     tools {
         maven 'MVN_HOME'
+        jdk 'jdk21'
     }
-
-    environment {
-        SONARQUBE_ENV = 'sonarqube-server'
-    }
-
     stages {
         stage('Git Clone') {
             steps {
-                git branch: 'feature-1.1', url: 'https://github.com/venkatesh221024/venkatesh-simplecutomerapp.git'
+                git branch: 'feature-1.1', url: 'https://github.com/gannurohith/sabear_simplecutomerapp.git'
             }
         }
-
         stage('SonarQube Analysis') {
             steps {
-                withSonarQubeEnv("${SONARQUBE_ENV}") {
-                    withCredentials([string(credentialsId: 'TOKEN1', variable: 'SONAR_TOKEN')]) {
-                        sh '''
-                            mvn clean verify sonar:sonar \
-                              -Dsonar.login=$SONAR_TOKEN \
-                              -DskipTests
-                        '''
+                withSonarQubeEnv(credentialsId: "${SONAR_QUBE_CREDENTIALS_ID}", installationName: "${SONAR_QUBE_NAME}") {
+                    sh 'mvn clean verify sonar:sonar -DskipTests'
+                }
+            }
+        }
+        stage('Maven Package') {
+            steps {
+                sh 'mvn clean package -DskipTests'
+            }
+        }
+        stage('Deploy to Nexus') {
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: 'Nexus-credentials',
+                    usernameVariable: 'NEXUS_USER',
+                    passwordVariable: 'NEXUS_PASS'
+                )]) {
+                    writeFile file: 'settings-temp.xml', text: """
+                        <settings xmlns="http://maven.apache.org/SETTINGS/1.0.0">
+                          <servers>
+                            <server>
+                              <id>${env.NEXUS_REPOSITORY_ID}</id>
+                              <username>${env.NEXUS_USER}</username>
+                              <password>${env.NEXUS_PASS}</password>
+                            </server>
+                          </servers>
+                        </settings>
+                    """
+                    sh 'mvn deploy -DskipTests --settings settings-temp.xml'
+                }
+            }
+        }
+        stage('Deploy to Tomcat') {
+            steps {
+                script {
+                    def warFile = findFiles(glob: 'target/*.war')[0]
+                    if (warFile) {
+                        sh "mv ${warFile.path} target/${env.TOMCAT_APP_CONTEXT}.war"
+                        step([
+                            $class: 'DeployPublisher',
+                            adapters: [[
+                                $class: 'Tomcat9xAdapter',
+                                credentialsId: "${TOMCAT_CREDENTIALS_ID}",
+                                url: "${TOMCAT_URL}"
+                            ]],
+                            war: "target/${env.TOMCAT_APP_CONTEXT}.war",
+                            contextPath: "${env.TOMCAT_APP_CONTEXT}"
+                        ])
+                    } else {
+                        error 'WAR file not found!'
                     }
                 }
             }
         }
-
-        stage('Maven Compile') {
-            steps {
-                sh 'mvn clean package -DskipTests -Dbuild.number=$BUILD_NUMBER'
-            }
+    }
+    post {
+        always {
+            echo 'Pipeline execution completed.'
         }
-
-        stage('Upload to Nexus') {
-            steps {
-                withCredentials([usernamePassword(
-                    credentialsId: 'Nexus-cred',
-                    usernameVariable: 'NEXUS_USER',
-                    passwordVariable: 'NEXUS_PASS'
-                )]) {
-                    sh '''
-                        mvn deploy:deploy-file \
-                          -DgroupId=com.javatpoint \
-                          -DartifactId=SimpleCustomerApp \
-                          -Dversion=${BUILD_NUMBER}-SNAPSHOT \
-                          -Dpackaging=war \
-                          -Dfile=target/SimpleCustomerApp-${BUILD_NUMBER}-SNAPSHOT.war \
-                          -DrepositoryId=Nexus_customer_app \
-                          -Durl=http://13.201.10.64:8081/repository/Nexus_customer_app/ \
-                          -DgeneratePom=true \
-                          -DretryFailedDeploymentCount=3 \
-                          -Dusername=$NEXUS_USER \
-                          -Dpassword=$NEXUS_PASS
-                    '''
-                }
-            }
+        success {
+            echo ':white_tick: Pipeline succeeded.'
+        }
+        failure {
+            echo ':x: Build or Deployment Failed!'
         }
     }
 }
