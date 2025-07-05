@@ -1,28 +1,64 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
-   <modelVersion>4.0.0</modelVersion>
-   <groupId>com.javatpoint</groupId>
-   <artifactId>SimpleCustomerApp</artifactId>
-   <packaging>war</packaging>
-   <version>${build.number}-SNAPSHOT</version>
-   <name>SimpleCustomerApp</name>
-   <url>http://maven.apache.org</url>
-   <properties>
-       <maven.compiler.source>1.8</maven.compiler.source>
-       <maven.compiler.target>1.8</maven.compiler.target>
-   </properties>
-   <build>
-      <plugins>
-         <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-war-plugin</artifactId>
-            <version>3.3.2</version>
-            <configuration>
-               <failOnMissingWebXml>false</failOnMissingWebXml>
-            </configuration>
-         </plugin>
-      </plugins>
-   </build>
-</project>
+pipeline {
+    agent any
+
+    tools {
+        maven 'MVN_HOME'
+    }
+
+    environment {
+        SONARQUBE_ENV = 'sonarqube-server'
+    }
+
+    stages {
+        stage('Git Clone') {
+            steps {
+                git branch: 'feature-1.1', url: 'https://github.com/venkatesh221024/venkatesh-simplecutomerapp.git'
+            }
+        }
+
+        stage('SonarQube Analysis') {
+            steps {
+                withSonarQubeEnv("${SONARQUBE_ENV}") {
+                    withCredentials([string(credentialsId: 'TOKEN1', variable: 'SONAR_TOKEN')]) {
+                        sh '''
+                            mvn clean verify sonar:sonar \
+                              -Dsonar.login=$SONAR_TOKEN \
+                              -DskipTests
+                        '''
+                    }
+                }
+            }
+        }
+
+        stage('Maven Compile') {
+            steps {
+                sh 'mvn clean package -DskipTests -Dbuild.number=$BUILD_NUMBER'
+            }
+        }
+
+        stage('Upload to Nexus') {
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: 'Nexus-cred',
+                    usernameVariable: 'NEXUS_USER',
+                    passwordVariable: 'NEXUS_PASS'
+                )]) {
+                    sh '''
+                        mvn deploy:deploy-file \
+                          -DgroupId=com.javatpoint \
+                          -DartifactId=SimpleCustomerApp \
+                          -Dversion=${BUILD_NUMBER}-SNAPSHOT \
+                          -Dpackaging=war \
+                          -Dfile=target/SimpleCustomerApp-${BUILD_NUMBER}-SNAPSHOT.war \
+                          -DrepositoryId=Nexus_customer_app \
+                          -Durl=http://13.201.10.64:8081/repository/Nexus_customer_app/ \
+                          -DgeneratePom=true \
+                          -DretryFailedDeploymentCount=3 \
+                          -Dusername=$NEXUS_USER \
+                          -Dpassword=$NEXUS_PASS
+                    '''
+                }
+            }
+        }
+    }
+}
