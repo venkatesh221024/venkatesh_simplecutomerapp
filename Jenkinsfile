@@ -4,6 +4,7 @@ pipeline {
         // SonarQube
         SONAR_QUBE_CREDENTIALS_ID = 'TOKEN1'
         SONAR_QUBE_NAME = 'sonarqube-server'
+        
         // Nexus
         NEXUS_REPOSITORY_ID = 'Nexus_customer_app'
         NEXUS_URL = 'http://3.110.33.225:8081/repository/Nexus_customer_app/'
