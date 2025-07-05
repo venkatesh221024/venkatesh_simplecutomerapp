@@ -45,7 +45,7 @@
     </build>
     <distributionManagement>
         <snapshotRepository>
-            <id>Nexus_customer_app</id>
+            <id>Nexus_customer_app2</id>
             <url>http://3.110.33.225:8081/repository/Nexus_customer_app2/</url>
         </snapshotRepository>
     </distributionManagement>
