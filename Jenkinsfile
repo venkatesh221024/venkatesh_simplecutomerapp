@@ -6,8 +6,8 @@ pipeline {
         SONAR_QUBE_NAME = 'sonarqube-server'
         
         // Nexus
-        NEXUS_REPOSITORY_ID = 'Nexus_customer_app'
-        NEXUS_URL = 'http://3.110.33.225:8081/repository/Nexus_customer_app/'
+        NEXUS_REPOSITORY_ID = 'Nexus_customer_app2'
+        NEXUS_URL = 'http://3.110.33.225:8081/repository/Nexus_customer_app2/'
         // Tomcat
         TOMCAT_URL = 'http://34.202.205.194:8080/manager/text'
         TOMCAT_CREDENTIALS_ID = 'tomcat-credentials'
